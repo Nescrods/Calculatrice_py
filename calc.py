@@ -8,7 +8,10 @@
 import sys
 import time
 
-tokens:tuple = ('+', '-', '*', '/', '=', '(', ')')
+tokens_priorities: tuple = ('(', ')')
+tokens_operators:tuple = ('+', '-', '*', '/', ':', '=')
+tokens:tuple = tokens_priorities + tokens_operators
+
 decimal_ponctuation:tuple = (',', '.')
 
 class Lexer:
@@ -17,7 +20,7 @@ class Lexer:
 
         print("Lexer call --\n")
         self.list_of_tokens = self.tokeniser(usr_input)
-        self.print_list_of_tokens(tuple(self.list_of_tokens))
+        # self.print_list_of_tokens(tuple(self.list_of_tokens))
         self.return_list()
 
 
@@ -61,7 +64,9 @@ class Lexer:
                 i = i + tmp_tuple[1]
                 continue
             elif (usr_input[i].islower() or usr_input[i].isupper()):                    # get les chars
-                print("i have a:    char")
+                list_of_tokens.append(usr_input[i])
+                i = i + 1
+                continue
             else:
                 raise Exception(f"IDK what this is... : {usr_input[i]}")                 # si n'est pas rentré dans les cas précédants arrete l'execution
             i += 1
@@ -94,13 +99,15 @@ class Parser:
     def basic_verifications(self, lexer_work:list)->str:
         if (not lexer_work or lexer_work == ()):
             return "Tu te fous de moi ? Il n'y à rien qui parvient au Parser"
-        for i in range(0, len(lexer_work)):
-            if (lexer_work[i] and lexer_work[i - 1] in tokens and lexer_work[i] in tokens):
-                pass
-            if (lexer_work[i] in tokens and lexer_work[i + 1] in tokens):
-                print(f"error : [{lexer_work[i:i+2]}] : deux tokens d'affilés, c'est suspect...")
-        return ""
 
+        if (lexer_work[0] in tokens_operators):
+            print(f"commence par une mauvaise opération: {lexer_work[0]}")
+            return "Sus"
+        for i in range(0, len(lexer_work)):
+            if ((i + 1) < len(lexer_work) and (lexer_work[i] in tokens and lexer_work[i + 1] in tokens)):
+                print(f"error : [{lexer_work[i:i+2]}] : deux tokens d'affilés, c'est suspect...")
+                return "Sus"
+        return ""
 
 
 class Ast:
