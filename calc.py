@@ -7,26 +7,61 @@
 
 import sys
 import time
+import enum
 
-tokens_priorities: tuple = ('(', ')')
-tokens_operators:tuple = ('+', '-', '*', '/', ':', '=')
-tokens:tuple = tokens_priorities + tokens_operators
+list_of_unknows:list[str] = []
+
+tokens_positivity:tuple = ('+', '-')
+tokens_priorities:tuple = ('(', ')')
+tokens_comparaison:tuple = ('=', '>', '<', '!', '[', ']')
+tokens_operators:tuple = ('+', '-', '*', '/', ':', '!', '^')
+
+class Tokens(enum.Enum):
+    POSITIVE_SIGN = enum.auto()
+    NEGATIVE_SIGN = enum.auto()
+    BRACKET_L = enum.auto()
+    BRACKET_R = enum.auto()
+    EQUAL = enum.auto()
+    GREATER_THAN_R = enum.auto()
+    GREATER_THAN_L = enum.auto()
+    NOT = enum.auto()
+    SQUARE_BRACKET_L = enum.auto()
+    SQUARE_BRACKET_R = enum.auto()
+    ADD = enum.auto()
+    SUBSTRACT = enum.auto()
+    MULTIPLY = enum.auto()
+    DIVIDE = enum.auto()
+    FACTORIAL = enum.auto()
+    POWER = enum.auto()
+
+tokens:tuple = tokens_positivity + tokens_priorities + tokens_comparaison + tokens_operators
 
 decimal_ponctuation:tuple = (',', '.')
 
+
+class in_colors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKCYAN = '\033[96m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+
+
 class Lexer:
     def __init__ (self, usr_input:str)->None:
-        self.list_of_tokens:list = []
+        self.list_of_tokens:list[str] = []
 
-        print("Lexer call --\n")
+        print(f"Lexer call -- reçu: {usr_input}\n")
         self.list_of_tokens = self.tokeniser(usr_input)
-        # self.print_list_of_tokens(tuple(self.list_of_tokens))
+        self.print_list_of_tokens(tuple(self.list_of_tokens))
         self.return_list()
-
 
     def __list__ (self)->list:
         return self.list_of_tokens
-
 
     def get_number(self, to_found:list|tuple)->tuple[float|int, int]|None:
         iteration:int = 0
@@ -46,7 +81,6 @@ class Lexer:
             iteration += 1
         return (number, iteration)                  # return du nbr et du nbr d'iterations de i pour sauter le nbr précedement créé
 
-
     def tokeniser(self, usr_input:str)->list:
         usr_input = usr_input.replace(' ', '')      # suppretion tout les espaces pour avoir une str clean (évite de traiter des tokens inutiles)
         list_of_tokens:list = []
@@ -65,20 +99,19 @@ class Lexer:
                 continue
             elif (usr_input[i].islower() or usr_input[i].isupper()):                    # get les chars
                 list_of_tokens.append(usr_input[i])
+                list_of_unknows.append(usr_input[i])
                 i = i + 1
                 continue
             else:
-                raise Exception(f"IDK what this is... : {usr_input[i]}")                 # si n'est pas rentré dans les cas précédants arrete l'execution
+                close_program_because_of_error(f"Idk what is: {usr_input[i]}", 84)      # si n'est pas rentré dans les cas précédants arrete l'execution
             i += 1
         return list_of_tokens
 
-
     def print_list_of_tokens(self, list_of_tokens:tuple)->None:
         for elements in list_of_tokens:
-            print(elements)
+            print(f"Lexer get: {elements}")
         if (not list_of_tokens):
             print("no list content")
-
 
     def return_list(self):
         return self.list_of_tokens
@@ -86,28 +119,33 @@ class Lexer:
 
 class Parser:
     def __init__(self, lexer_work:list)->tuple:
-        error_msg = ""
+        self.error_msg:str = ""
+        self.verification_return:tuple = (str, list)
+        self.parser_correction:list = lexer_work
 
         print(f"Parser called -- reçu: {lexer_work}\n")
-        error_msg = self.basic_verifications(lexer_work)
-        if (error_msg != ""):
-            print(error_msg)
-            exit(84)
-        print(error_msg)
+        verification_return = self.basic_verifications(lexer_work)
+        if (verification_return[0] != "" or verification_return[1] is None):
+            close_program_because_of_error(verification_return[0], 84)
 
+        self.parser_correction = verification_return[1]
+        self.return_parser_work()
 
-    def basic_verifications(self, lexer_work:list)->str:
-        if (not lexer_work or lexer_work == ()):
-            return "Tu te fous de moi ? Il n'y à rien qui parvient au Parser"
-
-        if (lexer_work[0] in tokens_operators):
-            print(f"commence par une mauvaise opération: {lexer_work[0]}")
-            return "Sus"
+    def basic_verifications(self, lexer_work:list)->tuple:
+        if (not lexer_work):
+            return ("Tu te fous de moi ? Il n'y à rien qui parvient au Parser", None)
+        if ((lexer_work[0] not in (tokens_positivity + tokens_priorities + tuple(list_of_unknows)))) and (type(lexer_work[0]) not in (int, float)):
+            return (f"Le calcul ne commence pas avec un charactère acceptable: {lexer_work[0]}", None)
         for i in range(0, len(lexer_work)):
-            if ((i + 1) < len(lexer_work) and (lexer_work[i] in tokens and lexer_work[i + 1] in tokens)):
-                print(f"error : [{lexer_work[i:i+2]}] : deux tokens d'affilés, c'est suspect...")
-                return "Sus"
-        return ""
+            lexer_work[i] = self.try_to_number_get_transformed(lexer_work[i:])
+        print(f"La liste produite après la transformation en négatif == {lexer_work}")
+        return ("", lexer_work)
+
+    def try_to_number_get_transformed(self, rest_of_list:list)->int|str:
+        return "testing the nbr transformation"
+
+    def return_parser_work(self)->tuple:
+        return self.parser_correction
 
 
 class Ast:
@@ -115,7 +153,8 @@ class Ast:
         print("Ast called --\n")
     # if (steps > 0):
     #     print("More steps in the printing !")
-    pass
+    # doit return un tuple avec un bool (si True ou False, si il i a un comparateur), la réponse du calcul lui meme, une valeur de retour d'erreur (0 par défault) ect ...(j'ai pas d'idées pour l'instant)
+        pass
 
 
 def some_info():
@@ -129,13 +168,18 @@ def some_info():
             print(error, file=sys.stderr)
             exit(84)
 
+def close_program_because_of_error(error_msg:str, error_value:int)->None:
+    print(f"{in_colors.FAIL}ERROR: [{error_msg}]", file=sys.stderr)
+    if (not error_value):
+        exit(84)
+    exit(error_value)
 
 if (__name__ == "__main__"):
-    usr_input = input("Enter your calculation: ")
+    # usr_input = input("Enter your calculation: ")
     program_time = time.time()
 
-    lexer_work = Lexer(usr_input)
-    # print(lexer_work)
-    parser_assembly:tuple = Parser(lexer_work=lexer_work.return_list())
+    # lexer_work = Lexer(usr_input)
+    # parser_assembly:tuple = Parser(lexer_work=lexer_work.return_list())
 
+    print(Tokens)
     print(f"\n\nmon temmps = {round(time.time() - program_time, 3)}")
